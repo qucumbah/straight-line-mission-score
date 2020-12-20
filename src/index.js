@@ -1,5 +1,5 @@
 import * as xmlParser from 'fast-xml-parser';
-import getScore from './getScore';
+import getPathStats from './getPathStats';
 
 const gpxFileInput = document.getElementById('gpxFile');
 const startLatInput = document.getElementById('startLat');
@@ -7,7 +7,7 @@ const startLonInput = document.getElementById('startLon');
 const endLatInput = document.getElementById('endLat');
 const endLonInput = document.getElementById('endLon');
 const getScoreButton = document.getElementById('getScore');
-const warningBlock = document.getElementById('warningBlock');
+const infoBlock = document.getElementById('infoBlock');
 const scoreBlock = document.getElementById('scoreBlock');
 
 startLatInput.value = localStorage.getItem('startLatInput');
@@ -21,23 +21,28 @@ window.onbeforeunload = () => {
   localStorage.setItem('endLonInput', endLonInput.value);
 };
 
-const showWarning = () => {
-  warningBlock.style.display = 'block';
+const showWarning = (warning) => {
+  infoBlock.innerText = warning;
+  infoBlock.style.display = 'block';
 };
-const hideWarning = () => {
-  warningBlock.style.display = 'none';
+const hideInfoBlock = () => {
+  infoBlock.style.display = 'none';
 };
 
-gpxFileInput.oninput = () => hideWarning();
-startLatInput.oninput = () => hideWarning();
-startLonInput.oninput = () => hideWarning();
-endLatInput.oninput = () => hideWarning();
-endLonInput.oninput = () => hideWarning();
+window.onerror = (error) => {
+  infoBlock.innerText = (
+    `An error has occured. Ensure the gpx file and start/end locations are right.
+    If the error is still present, send this message and your .gpx file to the author:
+    ${error}`
+  );
+  infoBlock.style.display = 'block';
+};
 
-// gpxFileInput.oninput = (event) => {
-//   const gpxData = xmlParser.parse(event.target.files[0]);
-//   console.log(gpxData);
-// };
+gpxFileInput.oninput = () => hideInfoBlock();
+startLatInput.oninput = () => hideInfoBlock();
+startLonInput.oninput = () => hideInfoBlock();
+endLatInput.oninput = () => hideInfoBlock();
+endLonInput.oninput = () => hideInfoBlock();
 
 getScoreButton.onclick = () => {
   if (
@@ -47,8 +52,8 @@ getScoreButton.onclick = () => {
     || !endLatInput.value
     || !endLonInput.value
   ) {
-    showWarning();
-    // return;
+    showWarning('Not all inputs have been filled');
+    return;
   }
 
   const reader = new FileReader();
@@ -62,12 +67,27 @@ getScoreButton.onclick = () => {
     const trackSegments = gpxData.gpx[0].trk[0].trkseg;
     const trackPoints = trackSegments.map((segment) => segment.trkpt).flat();
     const path = trackPoints.map(
-      (trackPoint) => [trackPoint['@_lat'], trackPoint['@_lon']]
+      (trackPoint) => [Number(trackPoint['@_lat']), Number(trackPoint['@_lon'])]
     );
 
-    const start = [startLatInput.value, startLonInput.value];
-    const end = [endLatInput.value, endLonInput.value];
+    const start = [Number(startLatInput.value), Number(startLonInput.value)];
+    const end = [Number(endLatInput.value), Number(endLonInput.value)];
 
-    scoreBlock.innerText = getScore([start, ...path, end]);
+    const {
+      straightLineLength,
+      totalPathLength,
+      areaSum,
+    } = getPathStats([start, ...path, end]);
+
+    const niceify = (number) => number.toFixed(2);
+
+    scoreBlock.innerText = `
+    Straight line length: ${niceify(straightLineLength)}m
+    Your path length: ${niceify(totalPathLength)}m
+    Area sum: ${niceify(areaSum)}m^2
+    Average deviation (area sum / straight line length): ${niceify(areaSum / straightLineLength)}m
+
+    If this doesn't look right to you please send me your .gpx file and straight line start/end
+    `;
   };
 };

@@ -2,7 +2,7 @@ import * as GeoLib from 'geographiclib';
 
 const Geodesic = GeoLib.Geodesic.WGS84;
 
-const getScore = (path) => {
+const getPathStats = (path) => {
   const start = path[0];
   const end = path[path.length - 1];
 
@@ -70,9 +70,9 @@ const getScore = (path) => {
   }
 
   // It really would've been so much easier if the earth was flat
-  return path.reduce((areaSum, curPoint, curPointIndex) => {
+  return path.reduce((pathStats, curPoint, curPointIndex) => {
     if (curPoint === start) {
-      return 0;
+      return pathStats;
     }
 
     const prevPoint = path[curPointIndex - 1];
@@ -100,9 +100,6 @@ const getScore = (path) => {
       straightLineDirectionVector,
     );
 
-    const isGoingForward = dotProduct(pointsDifferenceNormal, straightLineDirectionVector) > 0;
-    const resultMultiplier = isGoingForward ? 1 : -1;
-
     const prevPointProjection = intersectLines(
       closePointOnStraightLine,
       straightLineDirectionVector,
@@ -117,28 +114,43 @@ const getScore = (path) => {
       getPerpendicular(straightLineDirectionVector),
     );
 
-    if (pathIntersectionWithStraightLine !== null) {
-      const firstTriangleArea = (
-        0.5
-        * distance(prevPointProjection, prevPoint)
-        * distance(prevPointProjection, pathIntersectionWithStraightLine)
-      );
-      const secondTriangleArea = (
-        0.5
-        * distance(curPointProjection, curPoint)
-        * distance(curPointProjection, pathIntersectionWithStraightLine)
-      );
-      return areaSum + resultMultiplier * (firstTriangleArea + secondTriangleArea);
-    }
+    const getNewArea = () => {
+      if (pathIntersectionWithStraightLine !== null) {
+        const firstTriangleArea = (
+          0.5
+          * distance(prevPointProjection, prevPoint)
+          * distance(prevPointProjection, pathIntersectionWithStraightLine)
+        );
+        const secondTriangleArea = (
+          0.5
+          * distance(curPointProjection, curPoint)
+          * distance(curPointProjection, pathIntersectionWithStraightLine)
+        );
+        return firstTriangleArea + secondTriangleArea;
+      }
 
-    const trapezoidFirstBaseLength = distance(prevPointProjection, prevPoint);
-    const trapezoidSecondBaseLength = distance(curPointProjection, curPoint);
-    const trapezoidHeight = distance(prevPointProjection, curPointProjection);
-    const trapezoidArea = (
-      0.5 * (trapezoidFirstBaseLength + trapezoidSecondBaseLength) * trapezoidHeight
-    );
+      const trapezoidFirstBaseLength = distance(prevPointProjection, prevPoint);
+      const trapezoidSecondBaseLength = distance(curPointProjection, curPoint);
+      const trapezoidHeight = distance(prevPointProjection, curPointProjection);
+      const trapezoidArea = (
+        0.5 * (trapezoidFirstBaseLength + trapezoidSecondBaseLength) * trapezoidHeight
+      );
 
-    return areaSum + resultMultiplier * trapezoidArea;
-  }, 0);
+      return trapezoidArea;
+    };
+
+    const isGoingForward = dotProduct(pointsDifferenceNormal, straightLineDirectionVector) > 0;
+    const areaMultiplier = isGoingForward ? 1 : -1;
+
+    return {
+      ...pathStats,
+      areaSum: pathStats.areaSum + areaMultiplier * getNewArea(),
+      totalPathLength: pathStats.totalPathLength + distance(prevPoint, curPoint),
+    };
+  }, {
+    straightLineLength: straightLine.s13,
+    areaSum: 0,
+    totalPathLength: 0,
+  });
 };
-export default getScore;
+export default getPathStats;

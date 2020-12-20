@@ -7,7 +7,7 @@ input {
   margin-top: 15px;
 }
 
-#warningBlock {
+#infoBlock {
   display: none;
   color: red;
   margin-bottom: 0;
