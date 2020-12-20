@@ -1,0 +1,18 @@
+body {
+  margin: 30px;
+}
+
+input {
+  display: block;
+  margin-top: 15px;
+}
+
+#infoBlock {
+  display: none;
+  color: red;
+  margin-bottom: 0;
+}
+
+button {
+  margin-top: 20px;
+}
