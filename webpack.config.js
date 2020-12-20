@@ -1,6 +1,17 @@
+const CopyPlugin = require('copy-webpack-plugin');
+
 module.exports = {
-  entry: './src/main.js',
+  entry: './src/index.js',
   target: 'web',
+  plugins: [
+    new CopyPlugin({
+      patterns: [
+        {
+          from: './resources/',
+        },
+      ],
+    }),
+  ],
   devtool: 'inline-source-map',
   devServer: {
     contentBase: './dist',
